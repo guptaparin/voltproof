@@ -61,8 +61,8 @@ export default function MeterPage({ params }: { params: { address: string } }) {
         {d?.risk.suspended && (
           <p className="mt-6 max-w-[70ch] rounded-md bg-panel p-4 text-[15px] shadow-[inset_0_0_0_1px_rgb(var(--reject))]">
             <span className="font-semibold text-reject">Suspended pending physical audit. </span>
-            This meter kept claiming more than the sky allowed, hour after hour. No single claim was impossible, but the
-            accumulated evidence was. Attestations are paused until an inspector reinstates it.
+            This meter kept claiming more than the sky allowed, hour after hour. The accumulated evidence crossed the fraud
+            threshold, so attestations are paused until an inspector reinstates it.
           </p>
         )}
       </section>

@@ -195,7 +195,7 @@ def series(address: str, hours: int = 72):
         if v:
             point |= {"energyWh": v["energy_wh"], "expectedWh": v["expected_wh"], "status": v["status"],
                       "scoreBps": v["score_bps"], "verdictId": v["id"], "certificateId": v["certificate_id"], "ghi": v["ghi"]}
-        elif cs > 0:
+        if cs > 0 and point.get("expectedWh") is None:
             try:
                 wx = S["weather"].hour(d.lat, d.lon, h)
                 point["expectedWh"] = round(pv_energy_wh(system, h, wx.ghi, wx.temp_c)[0], 1)

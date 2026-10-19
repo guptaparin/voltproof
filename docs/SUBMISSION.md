@@ -181,8 +181,9 @@ when you aren't clicking.
    a physical audit." Click **Mark audit passed and reinstate** to continue.
 
 **2:20–2:50 · Caught over time** (Network page, click **Jodhpur Farm Pump Array**)
-> "This meter's firmware was tampered to over-report a little every hour. A few hours slipped
-> through, but the evidence accumulated and the meter was suspended automatically."
+> "This meter's firmware was tampered to over-report every hour. The red bars are claims the
+> verifier refused; the dashed outline is what the sky physically allowed. The evidence piled up
+> and the meter was suspended automatically, with no human in the loop."
 
 **2:50–3:35 · Trade and claim** (Market page)
 > "Producers sell hours directly. I'll buy one kilowatt-hour and claim it for our campus. The
