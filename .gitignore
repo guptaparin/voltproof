@@ -21,3 +21,5 @@ firmware/voltproof_meter/types.h
 firmware/voltproof_meter/*.inc
 web/tsconfig.tsbuildinfo
 web/next-env.d.ts
+web/demo-site/
+web/out/

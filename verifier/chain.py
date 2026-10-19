@@ -98,11 +98,16 @@ class Chain:
             raise ChainRevert("transaction reverted")
         return receipt
 
-    def issue(self, reading: dict, device_sig: str, attestation: dict, verifier_sig: str) -> tuple[int, str]:
+    def threshold(self) -> int:
+        return self.certs.functions.attestationThreshold().call()
+
+    def issue(self, reading: dict, device_sig: str, attestations: list[tuple[dict, str]]) -> tuple[int, str]:
+        """attestations: [(attestation, signature)] already sorted by ascending verifier address."""
         r = (to_checksum_address(reading["device"]), int(reading["hourStart"]), int(reading["energyWh"]), int(reading["nonce"]))
-        a = (bytes.fromhex(attestation["readingHash"][2:]), int(attestation["expectedWh"]), int(attestation["scoreBps"]),
-             bytes.fromhex(attestation["modelHash"][2:]), int(attestation["issuedAt"]))
-        receipt = self._send(self.certs.functions.issue(r, bytes.fromhex(device_sig[2:]), a, bytes.fromhex(verifier_sig[2:])))
+        atts = [(bytes.fromhex(a["readingHash"][2:]), int(a["expectedWh"]), int(a["scoreBps"]),
+                 bytes.fromhex(a["modelHash"][2:]), int(a["issuedAt"])) for a, _ in attestations]
+        sigs = [bytes.fromhex(s[2:]) for _, s in attestations]
+        receipt = self._send(self.certs.functions.issueMulti(r, bytes.fromhex(device_sig[2:]), atts, sigs))
         ev = self.certs.events.CertificateIssued().process_receipt(receipt, errors=DISCARD)
         return int(ev[0]["args"]["id"]), "0x" + receipt["transactionHash"].hex().removeprefix("0x")
 

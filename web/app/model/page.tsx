@@ -25,7 +25,7 @@ const THREATS: [string, string, string][] = [
   ["An attacker impersonates a meter", "Signer must equal the registered device key", "Key extraction from the hardware: mitigated with secure boot, flash encryption or an ATECC608 secure element, plus on-chain revocation"],
   ["The same hour is certified twice", "Contract stores one certificate per meter-hour and a strictly increasing nonce", "None"],
   ["The same energy is claimed twice", "Retirement burns the tokens; burned Wh can't be transferred or retired again", "Off-chain double claims (e.g. also selling the same energy as a utility REC) need registry integration"],
-  ["The verifier is compromised or colludes", "The contract still checks the meter signature, nonce, uniqueness and nameplate cap; every verdict is Merkle-anchored, so history can't be rewritten", "A compromised verifier could approve plausible inflated claims: run several independent verifiers with an M-of-N threshold"],
+  ["A verifier is compromised or colludes", "M-of-N: the contract requires attestations from several distinct verifiers (2-of-2 in this demo), each re-running every check with its own key, model and fraud history. The contract also re-checks the meter signature, uniqueness and nameplate cap, and every verdict is Merkle-anchored", "All M verifiers colluding at once; raise M and recruit verifiers with different incentives (DISCOMs, auditors, buyers)"],
   ["Someone steals certificates via the relayer", "Certificates always mint to the registered producer, whoever submits the transaction", "None"],
   ["Spam or denial of service against the verifier", "Signature checked first and cheaply; on-chain checks before weather lookups", "Production needs per-device rate limits"],
 ];

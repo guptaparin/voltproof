@@ -1,3 +1,5 @@
+import { STATIC_DEMO } from "./runtime";
+
 export const VERIFIER_URL = (process.env.NEXT_PUBLIC_VERIFIER_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 export type Reason = { code: string; severity: "ok" | "info" | "medium" | "high" | "critical"; message: string };
@@ -29,6 +31,7 @@ export type Verdict = {
   cusum: number | null;
   attestation: { readingHash: string; expectedWh: number; scoreBps: number; modelHash: string; issuedAt: number } | null;
   verifier_sig: string | null;
+  cosigners?: { url: string; ok: boolean; verifier?: string; score_bps?: number; reason?: string; attestation?: Verdict["attestation"]; signature?: string }[] | null;
   tx_hash: string | null;
   certificate_id: number | null;
   label: string | null;
@@ -46,6 +49,9 @@ export type Health = {
   model: { version: string; hash: string; acceptBps: number; holdBps: number; cusumH: number };
   weather: string;
   demoMode: boolean;
+  mode?: string;
+  attestationThreshold?: number;
+  verifiers?: string[];
   domain: { name: string; version: string; chainId: number; verifyingContract: `0x${string}` };
 };
 
@@ -65,6 +71,10 @@ export type FleetDevice = {
 };
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  if (STATIC_DEMO) {
+    const { demoApi } = await import("./demo/backend");
+    return demoApi(path, init) as Promise<T>;
+  }
   const r = await fetch(`${VERIFIER_URL}${path}`, { cache: "no-store", ...init });
   if (!r.ok) {
     let msg = `${r.status}`;

@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS verdicts (
   cusum REAL,
   attestation TEXT,
   verifier_sig TEXT,
+  cosigners TEXT,
   tx_hash TEXT,
   certificate_id INTEGER,
   label TEXT,
@@ -59,7 +60,7 @@ CREATE TABLE IF NOT EXISTS audit_batches (
 );
 """
 
-JSON_COLS = ("components", "reasons", "features", "attestation")
+JSON_COLS = ("components", "reasons", "features", "attestation", "cosigners")
 
 
 class Store:

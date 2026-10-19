@@ -117,7 +117,7 @@ export default function Market() {
             return [
               <tr key={l.id} className="border-t border-rule">
                 <td className="py-3 pr-2">
-                  <Link href={`/certificate/${l.certificateId}`} className="font-semibold hover:underline">{d?.name ?? "Meter"}</Link>
+                  <Link href={`/certificate?id=${l.certificateId}`} className="font-semibold hover:underline">{d?.name ?? "Meter"}</Link>
                   <div className="text-[13px] text-muted">{d?.producerName}<span className="sm:hidden"> · {hourRange(l.hourStart)}</span></div>
                 </td>
                 <td className="num hidden py-3 sm:table-cell">{hourRange(l.hourStart)}</td>
@@ -190,7 +190,7 @@ function BuyForm({ listing, sym, onDone }: { listing: Listing; sym: string; onDo
     <div className="rounded-lg bg-panel p-4 shadow-[inset_0_0_0_1px_rgb(var(--rule))]">
       {state.done ? (
         <p className="font-semibold text-ok">
-          {state.done} <Link href={`/certificate/${listing.certificateId}`} className="link ml-1 text-ink">View certificate</Link>
+          {state.done} <Link href={`/certificate?id=${listing.certificateId}`} className="link ml-1 text-ink">View certificate</Link>
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-[140px_1fr_1fr]">

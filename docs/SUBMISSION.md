@@ -48,13 +48,18 @@ true. That's the oracle problem, and it's where we focused.
 - **Persistent cheaters get suspended.** A CUSUM detector accumulates each meter's over-claims. A
   meter that inflates a little every hour is caught within days, even when no single hour looks
   impossible.
+- **No single verifier can mint on its own.** A second, independent verifier re-runs every check
+  with its own key, model state and fraud history, then co-signs. The contract requires M-of-N
+  distinct verifier signatures (2-of-2 in the demo), so one compromised verifier can't issue
+  anything.
 - **A smart contract re-checks everything and mints.** `GranularCertificate` verifies both the
   meter's and the verifier's signatures and confirms the meter is registered and active. It
   enforces one certificate per meter-hour and caps energy at nameplate capacity. Only then does it
   mint ERC-1155 tokens, where 1 token = 1 Wh.
 - **Peer-to-peer market.** Producers list hours directly. Buyers pay the producer and can buy and
   claim in one transaction. Claiming burns the tokens and records the beneficiary and purpose
-  permanently.
+  permanently. Buyers get a printable claim statement and a JSON evidence bundle covering the GHG
+  Protocol Scope 2 quality criteria (unique, retired, vintage, location, technology).
 - **Tamper-evident audit log.** Every verdict, including every rejection, is hashed into a Merkle
   tree whose root is anchored on-chain.
 - **Verify it yourself.** Each certificate page re-runs every check in the browser: the signatures,
@@ -66,7 +71,8 @@ true. That's the oracle problem, and it's where we focused.
 ## How we built it
 
 - **Smart contracts:** Solidity 0.8.24 with OpenZeppelin 5 (ERC-1155, EIP-712, ECDSA,
-  AccessControl). Three contracts and 22 Hardhat tests, including every attack path.
+  AccessControl). Three contracts with M-of-N verifier issuance and 27 Hardhat tests, including
+  every attack path.
 - **Verifier:** Python, FastAPI and scikit-learn. The physics is implemented from first principles:
   NOAA solar position, Haurwitz clear-sky, Erbs decomposition, isotropic plane-of-array
   transposition, NOCT cell temperature. We compiled the isolation forest into a single-sample
@@ -76,7 +82,13 @@ true. That's the oracle problem, and it's where we focused.
   Python/Solidity reference on 25 random vectors.
 - **Frontend:** Next.js 14 with viem, reading the chain directly. Its signature visual is the
   "daylight ledger": every hour drawn against its physical clear-sky ceiling.
-- **Deployment:** a local Hardhat chain for the demo, with a Polygon Amoy deployment path.
+- **Live demo:** the same app builds as a static site that runs in any browser. The verifier is
+  ported to TypeScript, and on 2,000 of 2,000 test cases it matches the Python model exactly:
+  same status, same score to the basis point, same reasons. Signatures are created and checked
+  for real in the browser; only the final mint is simulated, and the site says so.
+- **Quality:** 27 contract tests, 18 verifier unit tests, firmware crypto vectors and the
+  browser-parity test, all run in GitHub Actions on every push.
+- **Deployment:** a local Hardhat chain for the full stack, with a Polygon Amoy deployment path.
 
 ## Results
 
@@ -122,7 +134,7 @@ to check every claim against.
 ## What's next for VoltProof
 
 - Pilot on our campus rooftop with a real meter, then a housing society.
-- Require M-of-N independent verifiers (utilities, DISCOMs, auditors) per certificate.
+- Grow M-of-N from 2 demo verifiers to independent operators (DISCOMs, auditors, buyers).
 - Peer cross-checks: neighbouring meters see the same clouds, which sharpens verification further.
 - Integrate with I-REC and the national registry so certificates can't also be sold off-chain.
 - Move keys into ATECC608 secure elements and work with inverter makers to sign at the source.
@@ -146,8 +158,14 @@ numpy, web3.py, next.js, react, typescript, viem, tailwindcss, esp32, c, micro-e
 
 ## Links
 
+- **Live demo (no install):** `https://<you>.github.io/voltproof/`
 - Code: `https://github.com/<you>/voltproof`
 - Demo video: `<YouTube link>`
+
+## Gallery images (upload in this order)
+
+`docs/gallery/01-thumbnail.png` (cover image), `02-architecture.png`, then the screenshots in
+`docs/gallery/`.
 
 ---
 
@@ -191,11 +209,17 @@ when you aren't clicking.
 
 Open the certificate, then click **Run checks in my browser**:
 > "Anyone can verify this certificate without trusting us. The browser recovers the meter's
-> signature, checks the on-chain record, the verifier's role, and the Merkle proof that this
-> decision is in the audit log anchored on-chain."
+> signature, checks the on-chain record, confirms two independent AI verifiers signed it (the
+> contract requires both), and checks the Merkle proof that this decision is in the audit log
+> anchored on-chain."
+
+Click **Claim statement**:
+> "And the buyer gets a claim statement for their Scope 2 report, with a machine-readable
+> evidence bundle an auditor can verify."
 
 **3:35–4:15 · Proof it works, and impact** (How it's verified page)
-> "We tested it on 80 meters it never saw, with twins that lie on every reading. Honest meters get
+> "Judges can try all of this at our live demo link, no install. We tested it on 80 meters it
+> never saw, with twins that lie on every reading. Honest meters get
 > 99.9% of hours certified. From 1.2× inflation upward, a cheater earns fewer certificates than if
 > it told the truth: cheating doesn't pay. It runs on a ₹1,500 retrofit meter, costs a fraction of
 > a cent per certificate on Polygon, and opens clean-energy markets to every rooftop. That's

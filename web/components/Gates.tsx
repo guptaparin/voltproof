@@ -1,4 +1,5 @@
 import type { Verdict } from "@/lib/api";
+import { STATIC_DEMO } from "@/lib/runtime";
 
 export const GATES = [
   { name: "Signature", fail: "the signature doesn't belong to the registered meter key", detail: "The registered meter key signed exactly these numbers" },
@@ -7,7 +8,7 @@ export const GATES = [
   { name: "Time", fail: "the hour isn't finished, aligned to the hour, or recent enough", detail: "Hour is finished, aligned and recent" },
   { name: "Uniqueness", fail: "this meter-hour was already certified, or the nonce was reused", detail: "Meter-hour never certified before; nonce is fresh" },
   { name: "Physics + AI", fail: "the claim isn't plausible for the sky over that site that hour", detail: "Plausible against independent satellite irradiance" },
-  { name: "Contract", fail: "the smart contract refused to mint", detail: "Smart contract re-checks both signatures and mints" },
+  { name: "Consensus", fail: "not enough independent verifiers agreed, or the contract refused to mint", detail: "Independent verifiers co-sign; the contract re-checks every signature and mints" },
 ];
 
 const CODE_GATE: Record<string, number> = {
@@ -28,6 +29,7 @@ const CODE_GATE: Record<string, number> = {
   ANOMALY_DETECTED: 5,
   HELD_FOR_REVIEW: 5,
   ONCHAIN_REVERT: 6,
+  PEER_DISAGREED: 6,
 };
 
 export function stoppedAt(v: Verdict): number | null {
@@ -45,7 +47,9 @@ export function GatePipeline({ verdict }: { verdict: Verdict | null }) {
   const caption = !verdict
     ? "Every reading passes these seven checks in order."
     : accepted
-    ? "Passed all seven checks. The contract minted a certificate."
+    ? STATIC_DEMO
+      ? "Passed all seven checks and both verifiers signed. Minting is simulated in this browser demo."
+      : "Passed all seven checks. The contract minted a certificate."
     : held
     ? `Held at check ${stop! + 1}: plausibility is just below the issuance threshold, so it waits for review.`
     : `Stopped at check ${stop! + 1}: ${GATES[stop!].fail}.`;

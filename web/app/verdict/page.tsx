@@ -1,4 +1,6 @@
 "use client";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Link from "next/link";
 import { GatePipeline } from "@/components/Gates";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
@@ -7,7 +9,8 @@ import type { Verdict } from "@/lib/api";
 import { energy, hourRange, short } from "@/lib/format";
 import { usePoll } from "@/lib/hooks";
 
-export default function VerdictPage({ params }: { params: { id: string } }) {
+function VerdictPageInner() {
+  const params = { id: useSearchParams().get("id") ?? "" };
   const { data: v, error } = usePoll<Verdict & { merkle: any }>(`/v1/verdicts/${params.id}`, 0);
   if (error) return <Offline error={error} />;
   if (!v) return <p className="pt-16 text-muted">Loading…</p>;
@@ -39,11 +42,11 @@ export default function VerdictPage({ params }: { params: { id: string } }) {
             ))}
           </ul>
           {v.certificate_id && (
-            <Link href={`/certificate/${v.certificate_id}`} className="btn btn-sun mt-6">Open certificate #{v.certificate_id}</Link>
+            <Link href={`/certificate?id=${v.certificate_id}`} className="btn btn-sun mt-6">Open certificate #{v.certificate_id}</Link>
           )}
           <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-[15px]">
             <dt className="text-muted">Meter</dt>
-            <dd><Link className="link" href={`/meter/${v.device}`}>{v.device}</Link></dd>
+            <dd><Link className="link" href={`/meter?address=${v.device}`}>{v.device}</Link></dd>
             <dt className="text-muted">Nonce</dt>
             <dd className="num">{v.nonce}</dd>
             <dt className="text-muted">Reading hash</dt>
@@ -75,5 +78,13 @@ export default function VerdictPage({ params }: { params: { id: string } }) {
         )}
       </div>
     </>
+  );
+}
+
+export default function VerdictPage() {
+  return (
+    <Suspense fallback={<p className="pt-16 text-muted">Loading…</p>}>
+      <VerdictPageInner />
+    </Suspense>
   );
 }

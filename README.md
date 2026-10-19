@@ -9,6 +9,11 @@ contract mint a certificate, and each kilowatt-hour can be claimed exactly once.
 > **Track:** Renewable Energy & Energy Trading: renewable certificate tracking, peer-to-peer
 > energy trading, tokenized incentives for clean energy.
 > IEEE ClimateChain Global Hackathon 2026.
+>
+> **▶ Live demo:** `https://<your-github-user>.github.io/voltproof/`. It runs in your browser,
+> nothing to install. **Run the full stack:** `./demo.sh`.
+
+![VoltProof architecture](docs/gallery/02-architecture.png)
 
 ---
 
@@ -38,9 +43,10 @@ VoltProof makes every certificate carry its own evidence:
 | **On-chain identity** | The meter is real, registered and not revoked | `DeviceRegistry` contract with nameplate capacity and location |
 | **Physics** | The claim is physically possible | Solar geometry: zero after sunset, never above clear-sky output for that site and hour |
 | **AI verification** | The claim is plausible given the actual weather | Expected output from independent irradiance (Open-Meteo), cloud-aware tolerance, isolation-forest anomaly detection, the meter's own history |
+| **M-of-N consensus** | No single verifier can mint on its own | A second, independent verifier re-runs every check with its own key and fraud history; the contract requires `attestationThreshold` distinct verifier signatures (2-of-2 in the demo) |
 | **Sequential fraud detection** | The meter isn't cheating a little every hour | CUSUM over each meter's standardised over-claims; suspends persistent over-reporters |
 | **Smart contract** | Both signatures are valid; the hour was never certified; energy ≤ nameplate | `GranularCertificate` re-checks everything on-chain and mints ERC-1155 tokens (1 token = 1 Wh) |
-| **Retirement** | Nobody else can claim the same Wh | Claiming burns the tokens and records the beneficiary forever |
+| **Retirement** | Nobody else can claim the same Wh | Claiming burns the tokens and records the beneficiary forever; buyers get a printable claim statement and a JSON evidence bundle for Scope 2 reporting |
 | **Audit log** | The verifier can't quietly rewrite its decisions | Every verdict, including rejections, goes into a Merkle tree whose root is anchored on-chain |
 
 Anyone can open a certificate page and **re-run every check in their own browser**: signature
@@ -95,12 +101,13 @@ records which source it used.
 
 | Folder | What it is |
 |---|---|
-| `contracts/` | Solidity 0.8.24 + OpenZeppelin 5: `DeviceRegistry`, `GranularCertificate`, `CertificateMarket`. 22 Hardhat tests covering every attack path. |
+| `contracts/` | Solidity 0.8.24 + OpenZeppelin 5: `DeviceRegistry`, `GranularCertificate` (with M-of-N issuance), `CertificateMarket`. 27 Hardhat tests covering every attack path. |
 | `verifier/` | Python FastAPI service: the 7-gate pipeline, physics + ML model, CUSUM, SQLite verdict store, Merkle audit log, evaluation harness. |
 | `vpcore/` | Shared physics (solar position, Haurwitz clear-sky, Erbs decomposition, plane-of-array transposition, NOCT temperature), weather providers, EIP-712. |
 | `simulator/` | 12-meter fleet across India (one deliberately dishonest), backfill / live modes, Attack Lab scenarios, producer listing and buyer agents. |
 | `firmware/` | ESP32 + INA219 meter firmware. Its C crypto core is tested bit-for-bit against the Python/Solidity implementation. |
-| `web/` | Next.js 14 app reading the chain directly with viem. |
+| `web/` | Next.js 14 app reading the chain directly with viem. `npm run build:demo` builds the static live demo, with the verifier ported to TypeScript (`lib/demo/`). |
+| `tests/` | 18 pytest unit tests: physics, EIP-712, Merkle proofs, model decisions, CUSUM. |
 
 ## Run it
 
@@ -128,6 +135,7 @@ python -m simulator init                                                        
 (cd contracts && npx hardhat run scripts/deploy.js --network localhost)
 uvicorn verifier.app:app --port 8000                                                     # terminal 3
 python -m simulator backfill --hours 72 && python -m simulator market && python -m simulator buy-demo
+# (demo.sh also starts a second, independent verifier on :8001 and wires them as 2-of-2)
 cd web && npm install && npm run dev                                                     # terminal 4
 ```
 
@@ -141,13 +149,36 @@ VERIFIER_KEY=0x… DEPLOYMENT=deployments/80002.json DEMO_MODE=0 uvicorn verifie
 
 In the web app, leave `NEXT_PUBLIC_DEMO_BUYER_KEY` unset and buyers connect their own wallet.
 
+### Live demo (static, no backend)
+
+The demo site is the same app running from a snapshot of a real local run. Certificates,
+signatures, Merkle proofs and anchored roots come straight from that run. In the Attack lab,
+readings and attestations are really EIP-712 signed and recovered in the browser. They are
+scored by a TypeScript port of the verifier that matches the Python model on 2,000 of 2,000
+test cases. Only the final mint is simulated, and the site says so in a banner.
+
+```bash
+./demo.sh                                 # in one terminal, then in another:
+python scripts/export_snapshot.py         # → web/public/demo/snapshot.json + forest.bin
+cd web && npm run build:demo              # → web/demo-site/ (static)
+```
+
+**GitHub Pages:** push to GitHub, then go to Settings → Pages → Source: *GitHub Actions*. The
+`demo.yml` workflow publishes to `https://<user>.github.io/<repo>/` on every push.
+**Vercel:** import the repo with root directory `web`, build command `npm run build:demo`,
+output directory `demo-site`, and environment variable `NEXT_PUBLIC_STATIC_DEMO=1`.
+
 ### Tests
 
 ```bash
-cd contracts && npx hardhat test          # 22 contract tests
+cd contracts && npx hardhat test          # 27 contract tests, incl. M-of-N
+python -m pytest -q                       # 18 verifier unit tests
 python firmware/test/test_firmware.py     # firmware crypto vs. reference implementation
+python scripts/parity_cases.py /tmp/p.json && (cd web && npx tsx scripts/parity.ts /tmp/p.json)   # browser model = Python model
 python -m verifier.evaluate               # model evaluation (writes eval/results.json)
 ```
+
+All suites run in GitHub Actions on every push (`.github/workflows/ci.yml`).
 
 ## Threat model
 
@@ -158,7 +189,7 @@ python -m verifier.evaluate               # model evaluation (writes eval/result
 | Attacker impersonates a meter | Signer must equal the registered key; revocation on-chain | Key extraction: secure boot, flash encryption, ATECC608 |
 | Same hour certified twice | One certificate per meter-hour; strictly increasing nonce, enforced on-chain | — |
 | Same energy claimed twice | Retirement burns tokens permanently | Off-chain double selling (e.g. also as a utility REC) needs registry integration |
-| Verifier compromised | Contract still checks meter signature, uniqueness and nameplate; every verdict Merkle-anchored | A rogue verifier could approve *plausible* inflation: use M-of-N independent verifiers |
+| Verifier compromised | M-of-N: the contract requires distinct verifier signatures (2-of-2 in the demo); it still checks meter signature, uniqueness and nameplate; every verdict Merkle-anchored | All M verifiers colluding: raise M with verifiers that have different incentives (DISCOMs, auditors, buyers) |
 | Relayer steals certificates | Tokens always mint to the registered producer | — |
 | Malleable signatures | OpenZeppelin ECDSA requires low-s; firmware and verifier normalise | — |
 | Verifier spam / DoS | Cheap signature check first, chain checks before weather lookups | Needs per-device rate limits |
@@ -172,8 +203,9 @@ python -m verifier.evaluate               # model evaluation (writes eval/result
 - **Fits existing standards:** the hourly Wh granularity follows emerging granular-certificate
   practice for 24/7 carbon-free energy. Retirements carry beneficiary and purpose fields for
   GHG Protocol Scope 2 / ISO 14064 reporting.
-- **Decentralises verification:** any party can run a verifier with `VERIFIER_ROLE`. The contract
-  design extends naturally to requiring signatures from M of N independent verifiers.
+- **Decentralises verification:** any party can run a verifier with `VERIFIER_ROLE`, and the
+  contract already requires signatures from M of N independent verifiers. Raising M is one
+  governance call as DISCOMs, auditors or buyers join.
 - **Who uses it:** rooftop households and housing societies, schools and campuses, MSMEs, farm
   co-ops (sellers); companies and institutions with hourly clean-energy targets (buyers);
   regulators and auditors (the public ledger).

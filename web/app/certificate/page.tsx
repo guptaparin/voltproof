@@ -1,6 +1,7 @@
 "use client";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { parseAbiItem } from "viem";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { Offline } from "@/components/Status";
@@ -10,10 +11,11 @@ import { energy, hourRange, short } from "@/lib/format";
 import { useHealth } from "@/lib/hooks";
 import { verifyCertificate, type Check } from "@/lib/verify";
 
-type Retirement = { amountWh: bigint; onBehalfOf: string; beneficiary: string; purpose: string; timestamp: bigint; retiredBy: string };
+type Retirement = { retirementId?: bigint; amountWh: bigint; onBehalfOf: string; beneficiary: string; purpose: string; timestamp: bigint; retiredBy: string };
 
-export default function CertificatePage({ params }: { params: { id: string } }) {
-  const id = BigInt(params.id);
+function CertificatePageInner() {
+  const params = { id: useSearchParams().get("id") ?? "" };
+  const id = BigInt(params.id || "0");
   const { health: h, error } = useHealth();
   const [cert, setCert] = useState<any>(null);
   const [retired, setRetired] = useState<bigint>(0n);
@@ -81,7 +83,7 @@ export default function CertificatePage({ params }: { params: { id: string } }) 
         <p className="text-muted">Hourly energy attribute certificate #{params.id}</p>
         <h1 className="display mt-2 text-[40px] font-[750] sm:text-[60px]">{energy(issued)} of solar</h1>
         <p className="wide mt-3 text-[20px]">
-          <Link href={`/meter/${cert.device}`} className="link">{v?.device_name ?? short(cert.device)}</Link>
+          <Link href={`/meter?address=${cert.device}`} className="link">{v?.device_name ?? short(cert.device)}</Link>
           <span className="text-muted">, {hourRange(Number(cert.hourStart))}</span>
         </p>
         <div className="mt-6 max-w-[560px]">
@@ -116,9 +118,28 @@ export default function CertificatePage({ params }: { params: { id: string } }) 
                 "Verifier record unavailable."
               )}
             </Step>
-            <Step n={4} title="Attested by the AI verifier">
-              Score {(Number(cert.scoreBps) / 100).toFixed(1)}%, signed by <code>{short(cert.verifier, 10)}</code> with model{" "}
-              <code>{short(cert.modelHash, 10)}</code>.
+            <Step n={4} title={Number(cert.verifierCount ?? 1) > 1 ? `Attested by ${cert.verifierCount} independent AI verifiers` : "Attested by the AI verifier"}>
+              {Number(cert.verifierCount ?? 1) > 1 ? (
+                <>
+                  Each verifier re-ran every check with its own key, model and fraud history. Lowest score{" "}
+                  {(Number(cert.scoreBps) / 100).toFixed(1)}%; model <code>{short(cert.modelHash, 10)}</code>.
+                  <ul className="mt-1 text-[14px] text-muted">
+                    <li>
+                      <code>{short(h.verifier, 10)}</code> verifier A, score {((v?.attestation?.scoreBps ?? 0) / 100).toFixed(1)}%
+                    </li>
+                    {v?.cosigners?.filter((c) => c.ok).map((c, i) => (
+                      <li key={c.verifier}>
+                        <code>{short(c.verifier, 10)}</code> verifier {String.fromCharCode(66 + i)}, score {((c.score_bps ?? 0) / 100).toFixed(1)}%
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <>
+                  Score {(Number(cert.scoreBps) / 100).toFixed(1)}%, signed by <code>{short(cert.verifier, 10)}</code> with model{" "}
+                  <code>{short(cert.modelHash, 10)}</code>.
+                </>
+              )}
             </Step>
             <Step n={5} title="Minted on-chain">
               The contract re-checked both signatures and the nameplate limit, then minted {energy(issued)} to producer{" "}
@@ -136,7 +157,8 @@ export default function CertificatePage({ params }: { params: { id: string } }) 
                     <li key={i}>
                       <b>{energy(Number(r.amountWh))}</b> retired for <b>{r.beneficiary || short(r.onBehalfOf)}</b>
                       {r.purpose && <span className="text-muted"> ({r.purpose})</span>} on{" "}
-                      {new Date(Number(r.timestamp) * 1000).toLocaleDateString()}
+                      {new Date(Number(r.timestamp) * 1000).toLocaleDateString()} ·{" "}
+                      <Link className="link" href={`/claim?cert=${params.id}&r=${String(r.retirementId ?? 0)}`}>Claim statement</Link>
                     </li>
                   ))}
                 </ul>
@@ -193,4 +215,12 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 
 function Mono({ children }: { children: React.ReactNode }) {
   return <p className="mt-1 break-all font-mono text-[12px] text-muted">{children}</p>;
+}
+
+export default function CertificatePage() {
+  return (
+    <Suspense fallback={<p className="pt-16 text-muted">Loading…</p>}>
+      <CertificatePageInner />
+    </Suspense>
+  );
 }

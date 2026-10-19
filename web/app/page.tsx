@@ -80,7 +80,7 @@ export default function Home() {
               {fleet.data?.devices.map((d) => (
                 <tr key={d.address} className="border-t border-rule">
                   <td className="py-2.5 pr-2">
-                    <Link href={`/meter/${d.address}`} className="font-semibold hover:underline">
+                    <Link href={`/meter?address=${d.address}`} className="font-semibold hover:underline">
                       {d.name}
                     </Link>
                     <div className="text-[13px] text-muted">

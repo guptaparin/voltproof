@@ -10,7 +10,7 @@ export function primaryReason(v: Verdict) {
 
 export default function VerdictRow({ v }: { v: Verdict }) {
   const r = primaryReason(v);
-  const href = v.certificate_id ? `/certificate/${v.certificate_id}` : `/verdict/${v.id}`;
+  const href = v.certificate_id ? `/certificate?id=${v.certificate_id}` : `/verdict?id=${v.id}`;
   return (
     <li className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 border-t border-rule py-3 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto]">
       <div className="min-w-0">

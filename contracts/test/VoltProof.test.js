@@ -267,6 +267,58 @@ describe("VoltProof", function () {
     });
   });
 
+  describe("M-of-N verification (decentralised verifiers)", function () {
+    let v2, v3;
+    beforeEach(async function () {
+      [, , , , , , v2, v3] = await ethers.getSigners();
+      await certs.grantRole(await certs.VERIFIER_ROLE(), v2.address);
+      await certs.grantRole(await certs.VERIFIER_ROLE(), v3.address);
+      await certs.setAttestationThreshold(2);
+    });
+    async function sorted(signers, r) {
+      const out = [];
+      for (const s of signers) out.push([s.address, ...(await attest(s, r))]);
+      out.sort((a, b) => (BigInt(a[0]) < BigInt(b[0]) ? -1 : 1));
+      return [out.map((x) => x[1]), out.map((x) => x[2])];
+    }
+    async function reading() {
+      const r = { device: device.address, hourStart: await pastHour(), energyWh: 2000, nonce: 1 };
+      return [r, await signReading(device, r)];
+    }
+
+    it("mints when 2 of 3 independent verifiers attest, and records the count", async function () {
+      const [r, sig] = await reading();
+      const [atts, sigs] = await sorted([v3, verifier], r);
+      await certs.issueMulti(r, sig, atts, sigs);
+      const c = await certs.getCertificate(1);
+      expect(c.verifierCount).to.equal(2);
+      expect(await certs.balanceOf(producer.address, 1)).to.equal(2000);
+    });
+
+    it("a single verifier is no longer enough once the threshold is raised", async function () {
+      const [r, sig] = await reading();
+      const [a, vsig] = await attest(verifier, r);
+      await expect(certs.issue(r, sig, a, vsig)).to.be.revertedWithCustomError(certs, "NotEnoughAttestations");
+    });
+
+    it("the same verifier can't count twice", async function () {
+      const [r, sig] = await reading();
+      const [a, vsig] = await attest(verifier, r);
+      await expect(certs.issueMulti(r, sig, [a, a], [vsig, vsig])).to.be.revertedWithCustomError(certs, "DuplicateVerifier");
+    });
+
+    it("one compromised verifier plus a rogue key is rejected", async function () {
+      const [r, sig] = await reading();
+      const [atts, sigs] = await sorted([verifier, rogueVerifier], r);
+      await expect(certs.issueMulti(r, sig, atts, sigs)).to.be.revertedWithCustomError(certs, "BadVerifierSignature");
+    });
+
+    it("only the admin can change the threshold", async function () {
+      await expect(certs.connect(stranger).setAttestationThreshold(1)).to.be.revertedWithCustomError(certs, "AccessControlUnauthorizedAccount");
+      await expect(certs.setAttestationThreshold(0)).to.be.revertedWithCustomError(certs, "InvalidThreshold");
+    });
+  });
+
   describe("Audit log", function () {
     it("only verifiers can anchor verdict batches (incl. rejections)", async function () {
       const root = ethers.id("merkle-root");

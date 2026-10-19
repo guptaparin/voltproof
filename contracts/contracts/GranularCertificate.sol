@@ -59,6 +59,7 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         uint64 issuedAt;
         bytes32 readingHash;
         bytes32 modelHash;
+        uint8 verifierCount;  // how many independent verifiers attested
     }
 
     struct Retirement {
@@ -83,6 +84,7 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
     DeviceRegistry public immutable registry;
 
     uint256 public nextId = 1;
+    uint8 public attestationThreshold = 1; // M in M-of-N; raise as independent verifiers join
     uint256 public totalIssuedWh;
     uint256 public totalRetiredWh;
 
@@ -114,6 +116,7 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         string beneficiary,
         string purpose
     );
+    event AttestationThresholdChanged(uint8 threshold);
     event AuditBatchAnchored(uint256 indexed batchId, bytes32 merkleRoot, uint32 accepted, uint32 rejected, uint64 fromTs, uint64 toTs);
 
     error DeviceNotActive(address device);
@@ -130,6 +133,9 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
     error ScoreTooLow(uint16 scoreBps);
     error ZeroEnergy();
     error ZeroAmount();
+    error NotEnoughAttestations(uint256 given, uint8 required);
+    error DuplicateVerifier(address verifier);
+    error InvalidThreshold();
 
     constructor(DeviceRegistry registry_, address admin, string memory uri_)
         ERC1155(uri_)
@@ -160,7 +166,8 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
 
     // ─────────────────────────────── issuance ────────────────────────────────
 
-    /// @notice Anyone (typically the verifier's relayer) may submit; certificates always
+    /// @notice Single-verifier issuance (valid while attestationThreshold == 1).
+    ///         Anyone (typically the verifier's relayer) may submit; certificates always
     ///         go to the device owner, so the submitter cannot steal them.
     function issue(
         Reading calldata r,
@@ -168,6 +175,37 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         Attestation calldata a,
         bytes calldata verifierSig
     ) external returns (uint256 id) {
+        Attestation[] memory atts = new Attestation[](1);
+        bytes[] memory sigs = new bytes[](1);
+        atts[0] = a;
+        sigs[0] = verifierSig;
+        return _issue(r, deviceSig, atts, sigs);
+    }
+
+    /// @notice M-of-N issuance: at least `attestationThreshold` *distinct* authorised
+    ///         verifiers must independently attest to the same reading. Signatures must be
+    ///         ordered by ascending verifier address (proves distinctness cheaply).
+    function issueMulti(
+        Reading calldata r,
+        bytes calldata deviceSig,
+        Attestation[] calldata atts,
+        bytes[] calldata verifierSigs
+    ) external returns (uint256 id) {
+        return _issue(r, deviceSig, atts, verifierSigs);
+    }
+
+    function setAttestationThreshold(uint8 threshold) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (threshold == 0) revert InvalidThreshold();
+        attestationThreshold = threshold;
+        emit AttestationThresholdChanged(threshold);
+    }
+
+    function _issue(
+        Reading calldata r,
+        bytes calldata deviceSig,
+        Attestation[] memory atts,
+        bytes[] memory sigs
+    ) internal returns (uint256 id) {
         DeviceRegistry.Device memory d = registry.getDevice(r.device);
         if (!d.active) revert DeviceNotActive(r.device);
         if (r.energyWh == 0) revert ZeroEnergy();
@@ -182,7 +220,7 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         if (existing != 0) revert AlreadyCertified(r.device, r.hourStart, existing);
         if (r.nonce <= lastNonce[r.device]) revert NonceNotIncreasing(lastNonce[r.device], r.nonce);
 
-        // physics hard cap enforced on-chain, independent of the verifier
+        // physics hard cap enforced on-chain, independent of any verifier
         uint256 maxWh = (uint256(d.capacityW) * NAMEPLATE_TOLERANCE_BPS) / 10_000;
         if (r.energyWh > maxWh) revert ExceedsNameplate(r.energyWh, maxWh);
 
@@ -190,12 +228,25 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         bytes32 rHash = hashReading(r);
         if (_hashTypedDataV4(rHash).recover(deviceSig) != r.device) revert BadDeviceSignature();
 
-        // 2) an authorised verifier attested to *this* reading
-        if (a.readingHash != rHash) revert AttestationMismatch();
-        if (a.issuedAt > block.timestamp + 300 || block.timestamp - a.issuedAt > MAX_ATTESTATION_AGE) revert AttestationStale();
-        if (a.scoreBps < MIN_SCORE_BPS || a.scoreBps > 10_000) revert ScoreTooLow(a.scoreBps);
-        address verifier = _hashTypedDataV4(hashAttestation(a)).recover(verifierSig);
-        if (!hasRole(VERIFIER_ROLE, verifier)) revert BadVerifierSignature(verifier);
+        // 2) enough distinct authorised verifiers attested to *this* reading
+        if (atts.length != sigs.length || atts.length < attestationThreshold) {
+            revert NotEnoughAttestations(atts.length, attestationThreshold);
+        }
+        address firstVerifier;
+        address prev;
+        uint16 minScore = 10_000;
+        for (uint256 i = 0; i < atts.length; i++) {
+            Attestation memory a = atts[i];
+            if (a.readingHash != rHash) revert AttestationMismatch();
+            if (a.issuedAt > block.timestamp + 300 || block.timestamp - a.issuedAt > MAX_ATTESTATION_AGE) revert AttestationStale();
+            if (a.scoreBps < MIN_SCORE_BPS || a.scoreBps > 10_000) revert ScoreTooLow(a.scoreBps);
+            address v = _hashTypedDataV4(_hashAttestationMem(a)).recover(sigs[i]);
+            if (!hasRole(VERIFIER_ROLE, v)) revert BadVerifierSignature(v);
+            if (v <= prev) revert DuplicateVerifier(v);
+            prev = v;
+            if (i == 0) firstVerifier = v;
+            if (a.scoreBps < minScore) minScore = a.scoreBps;
+        }
 
         id = nextId++;
         lastNonce[r.device] = r.nonce;
@@ -203,19 +254,24 @@ contract GranularCertificate is ERC1155, AccessControl, EIP712 {
         _certs[id] = Certificate({
             device: r.device,
             producer: d.owner,
-            verifier: verifier,
+            verifier: firstVerifier,
             hourStart: r.hourStart,
             energyWh: r.energyWh,
-            expectedWh: a.expectedWh,
-            scoreBps: a.scoreBps,
+            expectedWh: atts[0].expectedWh,
+            scoreBps: minScore,
             issuedAt: uint64(block.timestamp),
             readingHash: rHash,
-            modelHash: a.modelHash
+            modelHash: atts[0].modelHash,
+            verifierCount: uint8(atts.length)
         });
         totalIssuedWh += r.energyWh;
 
         _mint(d.owner, id, r.energyWh, "");
-        emit CertificateIssued(id, r.device, d.owner, r.hourStart, r.energyWh, a.expectedWh, a.scoreBps, verifier);
+        emit CertificateIssued(id, r.device, d.owner, r.hourStart, r.energyWh, atts[0].expectedWh, minScore, firstVerifier);
+    }
+
+    function _hashAttestationMem(Attestation memory a) internal pure returns (bytes32) {
+        return keccak256(abi.encode(ATTESTATION_TYPEHASH, a.readingHash, a.expectedWh, a.scoreBps, a.modelHash, a.issuedAt));
     }
 
     // ─────────────────────────────── retirement ──────────────────────────────

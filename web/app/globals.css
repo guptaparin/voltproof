@@ -94,3 +94,9 @@ a.link:hover { text-decoration-color: currentColor; }
 
 @keyframes rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 .rise { transform-origin: bottom; animation: rise .9s cubic-bezier(.2,.7,.2,1) both; }
+
+@media print {
+  .no-print, header:has(nav), footer, nav { display: none !important; }
+  body { background: #fff; color: #14213D; }
+  main { padding: 0 !important; }
+}

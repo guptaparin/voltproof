@@ -1,0 +1,72 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>VoltProof architecture</title>
+<style>
+@font-face { font-family: Archivo; src: url("../../../web/node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+:root { --paper:#EEF2F6; --panel:#fff; --ink:#14213D; --muted:#54637C; --rule:#CDD5E0; --sun:#F2B705; --reject:#C4314B; --ceiling:#9AA8BA; }
+* { box-sizing: border-box; margin: 0; }
+body { width: 1600px; height: 752px; background: var(--paper); color: var(--ink); font-family: Archivo, sans-serif; padding: 56px 64px; font-feature-settings: "tnum"; }
+h1 { font-size: 46px; font-weight: 750; font-variation-settings: "wdth" 125; letter-spacing: -.02em; }
+.sub { color: var(--muted); font-size: 21px; margin-top: 10px; }
+.flow { display: grid; grid-template-columns: 1fr 64px 1.75fr 64px 1.25fr; align-items: stretch; margin-top: 48px; }
+.box { background: var(--panel); border-radius: 12px; box-shadow: inset 0 0 0 1.5px var(--rule); padding: 22px 24px; }
+.box h2 { font-size: 23px; font-weight: 700; font-variation-settings: "wdth" 112; }
+.box p, .box li { font-size: 17px; color: var(--muted); line-height: 1.45; }
+.box ul { padding-left: 0; list-style: none; margin-top: 10px; }
+.arrow { display: flex; align-items: center; justify-content: center; }
+.arrow svg { width: 56px; }
+.gates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-top: 14px; }
+.gate { font-size: 17px; padding: 10px 12px; border-radius: 8px; background: var(--paper); }
+.gate b { color: var(--muted); font-weight: 600; margin-right: 6px; }
+.gate.ai { background: var(--ink); color: var(--paper); }
+.gate.ai b { color: var(--sun); }
+.tag { display:inline-block; font-size: 15px; padding: 3px 9px; border-radius: 99px; background: var(--sun); color: var(--ink); font-weight: 600; margin-top: 12px; }
+.bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 34px; }
+.peer { margin-top: 14px; padding: 12px 14px; border-radius: 8px; border: 1.5px dashed var(--ceiling); font-size: 16.5px; color: var(--muted); }
+.peer b { color: var(--ink); }
+.k { color: var(--ink); font-weight: 600; }
+</style></head>
+<body>
+  <h1>Every kilowatt-hour, proven where it was made</h1>
+  <p class="sub">How a rooftop's hour of sunshine becomes a certificate that can be claimed exactly once</p>
+
+  <div class="flow">
+    <div class="box">
+      <h2>Meter</h2>
+      <p style="margin-top:10px">ESP32 + INA219, or a smart inverter</p>
+      <ul>
+        <li>Key generated on the device</li>
+        <li>Integrates Wh over each UTC hour</li>
+        <li>Signs <span class="k">device, hour, Wh, nonce</span> with EIP-712</li>
+      </ul>
+      <span class="tag">signed at the source</span>
+    </div>
+    <div class="arrow"><svg viewBox="0 0 56 20"><path d="M2 10h46M40 3l9 7-9 7" fill="none" stroke="#14213D" stroke-width="2.5"/></svg></div>
+    <div class="box">
+      <h2>AI verifier: seven gates</h2>
+      <div class="gates">
+        <div class="gate"><b>1</b>Meter signature</div>
+        <div class="gate"><b>2</b>On-chain identity</div>
+        <div class="gate"><b>3</b>Fraud evidence (CUSUM)</div>
+        <div class="gate"><b>4</b>Hour finished &amp; recent</div>
+        <div class="gate"><b>5</b>Never certified before</div>
+        <div class="gate ai"><b>6</b>Physics + isolation forest vs satellite irradiance</div>
+      </div>
+      <div class="peer"><b>7 · Consensus:</b> an independent verifier re-runs every check with its own key and fraud history and co-signs. The contract requires 2-of-2.</div>
+    </div>
+    <div class="arrow"><svg viewBox="0 0 56 20"><path d="M2 10h46M40 3l9 7-9 7" fill="none" stroke="#14213D" stroke-width="2.5"/></svg></div>
+    <div class="box">
+      <h2>Smart contracts</h2>
+      <ul>
+        <li><span class="k">GranularCertificate</span>: re-checks every signature, one certificate per meter-hour, nameplate cap, mints ERC-1155 (1 token = 1 Wh)</li>
+        <li style="margin-top:8px"><span class="k">CertificateMarket</span>: producers sell direct; buy-and-claim burns the Wh</li>
+        <li style="margin-top:8px"><span class="k">DeviceRegistry</span>: meter keys, location, capacity, revocation</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="bottom">
+    <div class="box"><h2>Tamper-evident audit log</h2><p style="margin-top:8px">Every verdict, including every rejection, is Merkle-hashed and its root anchored on-chain. The verifier can't rewrite its own history.</p></div>
+    <div class="box"><h2>Check it yourself</h2><p style="margin-top:8px">Each certificate page re-derives every signature, the on-chain hash and the Merkle proof in the browser. No trust in VoltProof needed.</p></div>
+    <div class="box"><h2>Cheating doesn't pay</h2><p style="margin-top:8px">80 unseen meters × 300 daylight hours: honest meters 99.9% certified; from 1.2× inflation, a cheater earns fewer certificates than telling the truth.</p></div>
+  </div>
+</body></html>

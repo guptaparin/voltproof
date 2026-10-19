@@ -17,6 +17,8 @@ import logging
 import threading
 import time
 
+import httpx
+from eth_account import Account
 from eth_utils import to_checksum_address
 
 from vpcore import eip712
@@ -33,7 +35,11 @@ AUTO_ANCHOR_EVERY = 60
 
 
 class Engine:
-    def __init__(self, chain: Chain, store: Store, model: VerificationModel, weather, fleet_meta: dict | None = None):
+    def __init__(self, chain: Chain, store: Store, model: VerificationModel, weather, fleet_meta: dict | None = None,
+                 mode: str = "primary", peers: list[str] | None = None):
+        # primary: collects attestations and mints. peer: an independent verifier that only co-signs.
+        self.mode = mode
+        self.peers = peers or []
         self.chain = chain
         self.store = store
         self.model = model
@@ -45,7 +51,7 @@ class Engine:
     def process(self, reading: dict, signature: str, label: str | None = None, note: str | None = None) -> dict:
         with self.lock:
             v = self._process(reading, signature, label, note)
-        if len(self.store.unbatched()) >= AUTO_ANCHOR_EVERY:
+        if self.mode == "primary" and len(self.store.unbatched()) >= AUTO_ANCHOR_EVERY:
             try:
                 self.anchor()
             except Exception as e:  # never fail a submission because anchoring failed
@@ -151,7 +157,7 @@ class Engine:
         if status != "ACCEPTED":
             return finish(status, reasons, **extra)
 
-        # 7 ── attest + mint
+        # 7 ── attest (+ collect independent co-signatures) + mint
         att = {
             "readingHash": rhash,
             "expectedWh": int(round(a.expected_wh)),
@@ -160,13 +166,56 @@ class Engine:
             "issuedAt": now,
         }
         vsig = eip712.sign_attestation(self.chain.account.key.hex(), self.chain.chain_id, self.chain.certificate_address, att)
+        if self.mode == "peer":
+            return finish("ACCEPTED", reasons, attestation=att, verifier_sig=vsig, **extra)
+
+        collected = [(self.chain.account.address, att, vsig)]
+        cosigners = []
+        for url in self.peers:
+            c = self._cosign(url, r, signature, rhash)
+            cosigners.append(c)
+            if c.get("ok"):
+                collected.append((c["verifier"], c["attestation"], c["signature"]))
+        need = self.chain.threshold()
+        cosign_info = cosigners  # signatures are public evidence; browsers re-verify them
+        if len(collected) < need:
+            dissent = "; ".join(f"{c.get('verifier', c['url'])[:10]}…: {c.get('reason', 'unavailable')}" for c in cosigners if not c.get("ok"))
+            reasons.append({"code": "PEER_DISAGREED", "severity": "medium",
+                            "message": f"Only {len(collected)} of the {need} required independent verifiers attested. {dissent}"})
+            return finish("HELD", reasons, attestation=att, verifier_sig=vsig, cosigners=cosign_info, **extra)
+
+        collected.sort(key=lambda x: int(x[0], 16))
         try:
-            cert_id, tx = self.chain.issue(r, signature, att, vsig)
+            cert_id, tx = self.chain.issue(r, signature, [(x[1], x[2]) for x in collected])
         except ChainRevert as e:
             self.chain.reset_nonce()
             reasons.append({"code": "ONCHAIN_REVERT", "severity": "critical", "message": f"Contract rejected issuance: {e}"})
-            return finish("FAILED_ONCHAIN", reasons, attestation=att, verifier_sig=vsig, **extra)
-        return finish("ACCEPTED", reasons, attestation=att, verifier_sig=vsig, tx_hash=tx, certificate_id=cert_id, **extra)
+            return finish("FAILED_ONCHAIN", reasons, attestation=att, verifier_sig=vsig, cosigners=cosign_info, **extra)
+        if len(collected) > 1:
+            reasons.append({"code": "MULTI_VERIFIED", "severity": "ok",
+                            "message": f"Independently confirmed by {len(collected)} verifiers before minting."})
+        return finish("ACCEPTED", reasons, attestation=att, verifier_sig=vsig, cosigners=cosign_info,
+                      tx_hash=tx, certificate_id=cert_id, **extra)
+
+    def _cosign(self, url: str, r: dict, device_sig: str, rhash: str) -> dict:
+        """Ask an independent verifier to re-run the whole pipeline. Never trust its word:
+        its attestation must recover to a VERIFIER_ROLE holder and commit to this reading."""
+        try:
+            res = httpx.post(f"{url}/v1/cosign", json={"reading": r, "signature": device_sig}, timeout=60).json()
+        except Exception as e:
+            return {"url": url, "ok": False, "reason": f"unreachable ({type(e).__name__})"}
+        if res.get("status") != "ACCEPTED" or not res.get("attestation"):
+            top = (res.get("reasons") or [{"message": res.get("detail", "declined")}])[0]["message"]
+            return {"url": url, "ok": False, "verifier": res.get("verifier", url), "status": res.get("status"),
+                    "score_bps": res.get("score_bps"), "reason": top}
+        att = res["attestation"]
+        d = eip712.digest(self.chain.chain_id, self.chain.certificate_address, eip712.attestation_struct_hash(att))
+        signer = Account._recover_hash(d, signature=bytes.fromhex(res["verifier_sig"][2:]))
+        role = self.chain.certs.functions.VERIFIER_ROLE().call()
+        if att["readingHash"].lower() != rhash.lower() or not self.chain.certs.functions.hasRole(role, signer).call():
+            return {"url": url, "ok": False, "verifier": signer, "reason": "returned an invalid attestation"}
+        return {"url": url, "ok": True, "verifier": signer, "score_bps": att["scoreBps"], "expected_wh": att["expectedWh"],
+                "attestation": att, "signature": res["verifier_sig"]}
 
     # ───────────────────────────────────────────────────────────────────────
     def anchor(self) -> dict | None:

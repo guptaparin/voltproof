@@ -84,9 +84,11 @@ export default function Ledger() {
                   <span className="font-semibold">{r.beneficiary || short(r.onBehalfOf)}</span>
                   <div className="text-[13px] text-muted">{new Date(r.ts * 1000).toLocaleString()} · {short(r.onBehalfOf)}</div>
                 </td>
-                <td className="hidden py-2.5 text-muted md:table-cell">{r.purpose}</td>
+                <td className="hidden py-2.5 text-muted md:table-cell">
+                  {r.purpose} · <Link className="link" href={`/claim?cert=${r.certificateId}&r=${String(r.id)}`}>Statement</Link>
+                </td>
                 <td className="num py-2.5 text-right">{energy(Number(r.amountWh))}</td>
-                <td className="py-2.5 pl-3 text-right"><Link className="link" href={`/certificate/${r.certificateId}`}>#{String(r.certificateId)}</Link></td>
+                <td className="py-2.5 pl-3 text-right"><Link className="link" href={`/certificate?id=${r.certificateId}`}>#{String(r.certificateId)}</Link></td>
               </tr>
             ))}
           </tbody>
@@ -115,7 +117,7 @@ export default function Ledger() {
               <tr key={b.id} className="border-t border-rule">
                 <td className="num py-2.5 font-semibold">#{b.onchain_id}</td>
                 <td className="num py-2.5">
-                  <Link className="link" href={`/verdict/${b.from_verdict}`}>{b.from_verdict}</Link>–<Link className="link" href={`/verdict/${b.to_verdict}`}>{b.to_verdict}</Link>
+                  <Link className="link" href={`/verdict?id=${b.from_verdict}`}>{b.from_verdict}</Link>–<Link className="link" href={`/verdict?id=${b.to_verdict}`}>{b.to_verdict}</Link>
                 </td>
                 <td className="num py-2.5 text-right">{b.accepted} / {b.rejected}</td>
                 <td className="hidden py-2.5 pl-3 font-mono text-[12px] text-muted md:table-cell">{short(b.root, 14)}</td>

@@ -73,7 +73,11 @@ async def lifespan(_: FastAPI):
     store = Store(os.environ.get("DB_PATH", HERE / f"verdicts-{chain.chain_id}.sqlite"))
     weather = AutoProvider(HERE / "weather_cache.sqlite", mode=os.environ.get("WEATHER", "auto"))
     S.update(chain=chain, store=store, weather=weather, model=load_model(), demo=os.environ.get("DEMO_MODE", "1") == "1")
-    S["engine"] = Engine(chain, store, S["model"], weather, fleet_meta())
+    mode = os.environ.get("VERIFIER_MODE", "primary")
+    peers = [u.strip().rstrip("/") for u in os.environ.get("PEERS", "").split(",") if u.strip()]
+    S["engine"] = Engine(chain, store, S["model"], weather, fleet_meta(), mode=mode, peers=peers)
+    S["demo_reinstate"] = S["demo"]  # peers accept audit reinstatement in demo mode
+    S["demo"] = S["demo"] and mode == "primary"
     log.info("VoltProof verifier %s on chain %s (%s)", chain.account.address, chain.chain_id, chain.rpc_url)
     yield
 
@@ -115,6 +119,8 @@ def health():
         "startBlock": c.deployment.get("startBlock", 0),
         "model": {"version": MODEL_VERSION, "hash": S["model"].model_hash, "acceptBps": ACCEPT_BPS, "holdBps": HOLD_BPS, "cusumH": CUSUM_H},
         "weather": S["weather"].name, "demoMode": S["demo"],
+        "mode": S["engine"].mode, "peers": S["engine"].peers, "attestationThreshold": c.threshold(),
+        "verifiers": c.deployment.get("verifiers", [c.account.address]),
         "domain": {"name": "VoltProof", "version": "1", "chainId": c.chain_id, "verifyingContract": c.certificate_address},
     }
 
@@ -122,6 +128,16 @@ def health():
 @app.post("/v1/readings")
 def submit(sub: Submission):
     return S["engine"].process(sub.reading.model_dump(), sub.signature)
+
+
+@app.post("/v1/cosign")
+def cosign(sub: Submission):
+    """Independent re-verification requested by another verifier. Runs the full pipeline
+    against this verifier's own model, weather and per-meter fraud history."""
+    if S["engine"].mode != "peer":
+        raise HTTPException(403, "this verifier is not configured as a co-signing peer")
+    v = S["engine"].process(sub.reading.model_dump(), sub.signature)
+    return v | {"verifier": S["chain"].account.address}
 
 
 @app.get("/v1/verdicts")
@@ -313,8 +329,16 @@ def run_attack(body: AttackIn):
 
 @app.post("/v1/demo/reinstate")
 def reinstate(body: DeviceIn):
-    """Simulates a passed physical audit: clears the meter's fraud-evidence state."""
-    _require_demo()
+    """Simulates a passed physical audit: clears the meter's fraud-evidence state here and on
+    every peer verifier (each keeps its own independent evidence)."""
+    if not S.get("demo_reinstate"):
+        raise HTTPException(403, "demo endpoints disabled (DEMO_MODE=0)")
+    for url in S["engine"].peers:
+        try:
+            import httpx
+            httpx.post(f"{url}/v1/demo/reinstate", json={"device": body.device}, timeout=10)
+        except Exception:
+            pass
     S["store"].set_meter_state(body.device, 0.0, False)
     S["store"].db.execute("UPDATE meter_state SET suspended_reason=NULL WHERE lower(device)=lower(?)", (body.device,))
     S["store"].db.commit()

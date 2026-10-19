@@ -12,6 +12,8 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import abis from "./abis.json";
 import type { Health } from "./api";
+import { DEMO_BUYER, demoPublicClient, demoWalletClient } from "./demo/backend";
+import { STATIC_DEMO } from "./runtime";
 
 export const ABI = abis as unknown as {
   DeviceRegistry: any;
@@ -31,16 +33,18 @@ export function chainFor(h: Health) {
 
 // Untyped on purpose: ABIs are loaded from JSON at runtime.
 export function publicClient(h: Health): any {
+  if (STATIC_DEMO) return demoPublicClient();
   return createPublicClient({ chain: chainFor(h), transport: http(undefined, { batch: true }) });
 }
 
 export const explorerTx = (h: Health, tx: string) =>
-  h.chainId === 80002 ? `https://amoy.polygonscan.com/tx/${tx}` : null;
+  STATIC_DEMO ? null : h.chainId === 80002 ? `https://amoy.polygonscan.com/tx/${tx}` : null;
 
 export type Wallet = { client: WalletClient; account: Account | `0x${string}`; address: `0x${string}`; kind: "demo" | "injected" };
 
 /** Local demo uses a funded test key; on public testnets connect a browser wallet. */
 export async function getWallet(h: Health, preferInjected = false): Promise<Wallet> {
+  if (STATIC_DEMO) return { client: demoWalletClient() as any, account: DEMO_BUYER, address: DEMO_BUYER, kind: "demo" };
   const chain = chainFor(h);
   const demoKey = process.env.NEXT_PUBLIC_DEMO_BUYER_KEY as `0x${string}` | undefined;
   const eth = typeof window !== "undefined" ? (window as any).ethereum : undefined;

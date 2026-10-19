@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>VoltProof</title>
+<style>
+@font-face { font-family: Archivo; src: url("../../../web/node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+* { box-sizing: border-box; margin: 0; }
+body { width: 1200px; height: 800px; background: #EEF2F6; color: #14213D; font-family: Archivo, sans-serif; position: relative; overflow: hidden; }
+.wrap { position: absolute; left: 72px; top: 74px; }
+.brand { display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 700; font-variation-settings: "wdth" 112; }
+h1 { margin-top: 44px; font-size: 76px; line-height: 1.0; font-weight: 780; font-variation-settings: "wdth" 125; letter-spacing: -.025em; max-width: 1000px; }
+p { margin-top: 26px; font-size: 26px; color: #54637C; max-width: 900px; line-height: 1.35; }
+svg.ledger { position: absolute; left: 0; right: 0; bottom: 0; width: 1200px; height: 230px; }
+</style></head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 32 32"><path d="M3 25 C 9 3, 23 3, 29 25" fill="none" stroke="#9AA8BA" stroke-width="2" stroke-dasharray="2.5 2.5"/><path d="M7 25 C 11 11, 21 11, 25 25 Z" fill="#F2B705"/><path d="M3 25.5 H29" stroke="#14213D" stroke-width="2"/></svg>
+      VoltProof
+    </div>
+    <h1>Every kilowatt-hour, proven where it was made.</h1>
+    <p>Meter-signed, AI-verified, hourly solar certificates that can be claimed exactly once.</p>
+  </div>
+  <svg class="ledger" viewBox="0 0 1200 230" preserveAspectRatio="none" id="l"></svg>
+  <script>
+    // one day of hourly columns: clear-sky ceiling (dashed) and certified energy (sun)
+    const s = document.getElementById("l"); const n = 36, w = 1200 / n;
+    for (let i = 0; i < n; i++) {
+      const x = (i - 5) / 25; const c = x > 0 && x < 1 ? Math.sin(Math.PI * x) : 0;
+      if (c <= 0) continue;
+      const ceil = 200 * c ** 1.25, cert = ceil * (0.62 + 0.25 * Math.sin(i * 1.7) ** 2);
+      const bad = i === 17 || i === 22 ? ceil * 0.42 : 0;
+      s.innerHTML += `<rect x="${i * w + 2}" y="${230 - ceil}" width="${w - 4}" height="${ceil}" fill="none" stroke="#9AA8BA" stroke-dasharray="4 3"/>`
+        + `<rect x="${i * w + 2}" y="${230 - cert}" width="${w - 4}" height="${cert}" fill="#F2B705"/>`
+        + (bad ? `<rect x="${i * w + 2}" y="${230 - cert - bad}" width="${w - 4}" height="${bad}" fill="#C4314B"/>` : "");
+    }
+    s.innerHTML += `<line x1="0" x2="1200" y1="229" y2="229" stroke="#14213D" stroke-width="3"/>`;
+  </script>
+</body></html>

@@ -55,7 +55,7 @@ export default function Lab() {
         <p className="mt-4 max-w-[64ch] text-[18px] text-muted">
           Every scenario below sends a real submission for the{" "}
           {lab ? (
-            <Link href={`/meter/${lab.address}`} className="link text-ink">{lab.name}</Link>
+            <Link href={`/meter?address=${lab.address}`} className="link text-ink">{lab.name}</Link>
           ) : (
             "campus"
           )}{" "}
@@ -133,7 +133,7 @@ export default function Lab() {
                 <td className="num hidden py-2.5 pr-3 text-muted sm:table-cell">{hourRange(v.hour_start)}</td>
                 <td className="num py-2.5 pr-3 text-right">{energy(v.energy_wh)}</td>
                 <td className="py-2.5 text-right">
-                  <Link href={v.certificate_id ? `/certificate/${v.certificate_id}` : `/verdict/${v.id}`}>
+                  <Link href={v.certificate_id ? `/certificate?id=${v.certificate_id}` : `/verdict?id=${v.id}`}>
                     <Status status={v.status} />
                   </Link>
                 </td>
@@ -175,12 +175,12 @@ function ResultPanel({ r }: { r: Result }) {
 
       {!honest && <p className="mt-5 text-[15px]"><span className="font-semibold">Stopped by: </span>{r.scenario.defence}</p>}
       {r.certificate_id && (
-        <Link href={`/certificate/${r.certificate_id}`} className="btn btn-sun mt-5">
+        <Link href={`/certificate?id=${r.certificate_id}`} className="btn btn-sun mt-5">
           Open certificate #{r.certificate_id}
         </Link>
       )}
       {!r.certificate_id && (
-        <Link href={`/verdict/${r.id}`} className="link mt-5 inline-block text-[15px]">
+        <Link href={`/verdict?id=${r.id}`} className="link mt-5 inline-block text-[15px]">
           Full verdict record
         </Link>
       )}

@@ -2,9 +2,14 @@
   "chainId": 31337,
   "network": "localhost",
   "rpcUrl": "http://127.0.0.1:8545",
-  "startBlock": 4,
-  "deployedAt": "2026-10-19T17:48:25.955Z",
+  "startBlock": 6,
+  "deployedAt": "2026-10-19T18:43:02.496Z",
   "verifier": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+  "verifiers": [
+    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+  ],
+  "attestationThreshold": 2,
   "contracts": {
     "DeviceRegistry": {
       "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
@@ -640,6 +645,17 @@
           "type": "error"
         },
         {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "verifier",
+              "type": "address"
+            }
+          ],
+          "name": "DuplicateVerifier",
+          "type": "error"
+        },
+        {
           "inputs": [],
           "name": "ECDSAInvalidSignature",
           "type": "error"
@@ -800,6 +816,11 @@
           "type": "error"
         },
         {
+          "inputs": [],
+          "name": "InvalidThreshold",
+          "type": "error"
+        },
+        {
           "inputs": [
             {
               "internalType": "uint64",
@@ -813,6 +834,22 @@
             }
           ],
           "name": "NonceNotIncreasing",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "given",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "required",
+              "type": "uint8"
+            }
+          ],
+          "name": "NotEnoughAttestations",
           "type": "error"
         },
         {
@@ -875,6 +912,19 @@
             }
           ],
           "name": "ApprovalForAll",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "uint8",
+              "name": "threshold",
+              "type": "uint8"
+            }
+          ],
+          "name": "AttestationThresholdChanged",
           "type": "event"
         },
         {
@@ -1402,6 +1452,19 @@
         },
         {
           "inputs": [],
+          "name": "attestationThreshold",
+          "outputs": [
+            {
+              "internalType": "uint8",
+              "name": "",
+              "type": "uint8"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [],
           "name": "auditBatchCount",
           "outputs": [
             {
@@ -1640,6 +1703,11 @@
                   "internalType": "bytes32",
                   "name": "modelHash",
                   "type": "bytes32"
+                },
+                {
+                  "internalType": "uint8",
+                  "name": "verifierCount",
+                  "type": "uint8"
                 }
               ],
               "internalType": "struct GranularCertificate.Certificate",
@@ -1964,6 +2032,89 @@
         {
           "inputs": [
             {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "device",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "hourStart",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "energyWh",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "nonce",
+                  "type": "uint64"
+                }
+              ],
+              "internalType": "struct GranularCertificate.Reading",
+              "name": "r",
+              "type": "tuple"
+            },
+            {
+              "internalType": "bytes",
+              "name": "deviceSig",
+              "type": "bytes"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "bytes32",
+                  "name": "readingHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "expectedWh",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint16",
+                  "name": "scoreBps",
+                  "type": "uint16"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "modelHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "issuedAt",
+                  "type": "uint64"
+                }
+              ],
+              "internalType": "struct GranularCertificate.Attestation[]",
+              "name": "atts",
+              "type": "tuple[]"
+            },
+            {
+              "internalType": "bytes[]",
+              "name": "verifierSigs",
+              "type": "bytes[]"
+            }
+          ],
+          "name": "issueMulti",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
               "internalType": "address",
               "name": "",
               "type": "address"
@@ -2253,6 +2404,19 @@
             }
           ],
           "name": "setApprovalForAll",
+          "outputs": [],
+          "stateMutability": "nonpayable",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint8",
+              "name": "threshold",
+              "type": "uint8"
+            }
+          ],
+          "name": "setAttestationThreshold",
           "outputs": [],
           "stateMutability": "nonpayable",
           "type": "function"

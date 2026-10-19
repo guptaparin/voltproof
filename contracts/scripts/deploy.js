@@ -2,7 +2,7 @@
 // producer wallets. Writes ../deployments/<chainId>.json for the verifier and web app.
 //
 //   npx hardhat run scripts/deploy.js --network localhost
-//   VERIFIER_ADDRESS=0x... npx hardhat run scripts/deploy.js --network amoy
+//   VERIFIER_ADDRESSES=0xA,0xB THRESHOLD=2 npx hardhat run scripts/deploy.js --network amoy
 const fs = require("fs");
 const path = require("path");
 const { ethers, network, artifacts } = require("hardhat");
@@ -16,9 +16,12 @@ async function main() {
   const isLocal = Number(chainId) === 31337;
   console.log(`Network ${network.name} (${chainId}) — deployer ${deployer.address}`);
 
-  // On the local chain, Hardhat account #1 is the verifier/relayer.
-  const verifierAddress = process.env.VERIFIER_ADDRESS || (isLocal ? rest[0].address : null);
-  if (!verifierAddress) throw new Error("Set VERIFIER_ADDRESS for non-local networks");
+  // On the local chain, Hardhat accounts #1 and #2 run two independent verifiers (2-of-2).
+  const verifierList = (process.env.VERIFIER_ADDRESSES || process.env.VERIFIER_ADDRESS || (isLocal ? `${rest[0].address},${rest[1].address}` : ""))
+    .split(",").map((x) => x.trim()).filter(Boolean);
+  if (!verifierList.length) throw new Error("Set VERIFIER_ADDRESSES for non-local networks");
+  const threshold = Number(process.env.THRESHOLD || verifierList.length);
+  const verifierAddress = verifierList[0];
 
   const registry = await ethers.deployContract("DeviceRegistry", [deployer.address]);
   await registry.waitForDeployment();
@@ -31,12 +34,13 @@ async function main() {
   const market = await ethers.deployContract("CertificateMarket", [await certs.getAddress()]);
   await market.waitForDeployment();
 
-  await (await certs.grantRole(await certs.VERIFIER_ROLE(), verifierAddress)).wait();
+  for (const v of verifierList) await (await certs.grantRole(await certs.VERIFIER_ROLE(), v)).wait();
+  if (threshold > 1) await (await certs.setAttestationThreshold(threshold)).wait();
   const startBlock = await ethers.provider.getBlockNumber();
   console.log(`DeviceRegistry      ${await registry.getAddress()}`);
   console.log(`GranularCertificate ${await certs.getAddress()}`);
   console.log(`CertificateMarket   ${await market.getAddress()}`);
-  console.log(`Verifier            ${verifierAddress}`);
+  console.log(`Verifiers           ${verifierList.join(", ")}  (${threshold}-of-${verifierList.length} required)`);
 
   // Register the fleet produced by `python -m simulator init`
   if (fs.existsSync(FLEET_FILE)) {
@@ -72,6 +76,8 @@ async function main() {
     startBlock,
     deployedAt: new Date().toISOString(),
     verifier: verifierAddress,
+    verifiers: verifierList,
+    attestationThreshold: threshold,
     contracts: {
       DeviceRegistry: { address: await registry.getAddress(), abi: await abi("DeviceRegistry") },
       GranularCertificate: { address: await certs.getAddress(), abi: await abi("GranularCertificate") },

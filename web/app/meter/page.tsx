@@ -1,5 +1,6 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import DaylightLedger, { type LedgerPoint } from "@/components/DaylightLedger";
 import { RiskBar } from "@/components/RiskBar";
 import { Offline } from "@/components/Status";
@@ -18,7 +19,8 @@ type SeriesPoint = {
   verdictId?: number;
 };
 
-export default function MeterPage({ params }: { params: { address: string } }) {
+function MeterPageInner() {
+  const params = { address: useSearchParams().get("address") ?? "" };
   const router = useRouter();
   const series = usePoll<{ points: SeriesPoint[]; risk: { cusum: number; threshold: number; suspended: boolean } }>(
     `/v1/devices/${params.address}/series?hours=96`,
@@ -73,7 +75,7 @@ export default function MeterPage({ params }: { params: { address: string } }) {
           <DaylightLedger
             points={pts}
             height={230}
-            onSelect={(p: any) => p.cert ? router.push(`/certificate/${p.cert}`) : p.vid && router.push(`/verdict/${p.vid}`)}
+            onSelect={(p: any) => p.cert ? router.push(`/certificate?id=${p.cert}`) : p.vid && router.push(`/verdict?id=${p.vid}`)}
           />
         )}
       </section>
@@ -92,5 +94,13 @@ function Fig({ k, v }: { k: string; v: string }) {
       <dt className="text-[14px] text-muted">{k}</dt>
       <dd className="wide mt-0.5 text-[24px] font-semibold">{v}</dd>
     </div>
+  );
+}
+
+export default function MeterPage() {
+  return (
+    <Suspense fallback={<p className="pt-16 text-muted">Loading…</p>}>
+      <MeterPageInner />
+    </Suspense>
   );
 }

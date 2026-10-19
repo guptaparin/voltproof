@@ -168,4 +168,4 @@ def clear_sky_ceiling_wh(system: PVSystem, hour_start: float, margin: float = 1.
     best = PVSystem(system.capacity_w, system.lat, system.lon, system.tilt_deg,
                     system.azimuth_deg, performance_ratio=1.0, temp_coeff=0.0)
     e, _ = pv_energy_wh(best, hour_start, ghi_cs, 25.0)
-    return min(e * margin, system.capacity_w * 1.10)
+    return min(e * margin, system.capacity_w * 11 / 10)  # exactly the on-chain cap (110%)

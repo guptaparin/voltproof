@@ -91,23 +91,30 @@ export async function verifyCertificate(
     ok: rh.toLowerCase() === (cert.readingHash as string).toLowerCase() && BigInt(cert.energyWh) === reading.energyWh,
   });
 
-  // 4 — verifier attestation
+  // 4 — independent verifier attestations (M-of-N)
   if (v.attestation && v.verifier_sig) {
-    const a = v.attestation;
-    const att = {
-      readingHash: a.readingHash as Hex,
-      expectedWh: BigInt(a.expectedWh),
-      scoreBps: a.scoreBps,
-      modelHash: a.modelHash as Hex,
-      issuedAt: BigInt(a.issuedAt),
-    };
-    const ver = await recoverTypedDataAddress({ domain, types: ATTESTATION_TYPES, primaryType: "Attestation", message: att, signature: v.verifier_sig as Hex });
+    const all = [
+      { attestation: v.attestation, signature: v.verifier_sig },
+      ...(v.cosigners ?? []).filter((c) => c.ok && c.attestation && c.signature).map((c) => ({ attestation: c.attestation!, signature: c.signature! })),
+    ];
     const role = (await client.readContract({ address: h.contracts.GranularCertificate, abi: ABI.GranularCertificate, functionName: "VERIFIER_ROLE" })) as Hex;
-    const has = (await client.readContract({ address: h.contracts.GranularCertificate, abi: ABI.GranularCertificate, functionName: "hasRole", args: [role, ver] })) as boolean;
+    const threshold = Number(await client.readContract({ address: h.contracts.GranularCertificate, abi: ABI.GranularCertificate, functionName: "attestationThreshold" }));
+    const signers = new Set<string>();
+    let allOk = true;
+    const names: string[] = [];
+    for (const x of all) {
+      const a = x.attestation;
+      const att = { readingHash: a.readingHash as Hex, expectedWh: BigInt(a.expectedWh), scoreBps: a.scoreBps, modelHash: a.modelHash as Hex, issuedAt: BigInt(a.issuedAt) };
+      const ver = await recoverTypedDataAddress({ domain, types: ATTESTATION_TYPES, primaryType: "Attestation", message: att, signature: x.signature as Hex });
+      const has = (await client.readContract({ address: h.contracts.GranularCertificate, abi: ABI.GranularCertificate, functionName: "hasRole", args: [role, ver] })) as boolean;
+      allOk &&= has && a.readingHash.toLowerCase() === rh.toLowerCase();
+      signers.add(ver.toLowerCase());
+      names.push(`${ver.slice(0, 8)}… (${(a.scoreBps / 100).toFixed(1)}%)`);
+    }
     checks.push({
-      label: "An authorised AI verifier attested it",
-      detail: `attestation signed by ${ver.slice(0, 10)}…, score ${(a.scoreBps / 100).toFixed(1)}%, holds VERIFIER_ROLE: ${has ? "yes" : "no"}`,
-      ok: has && ver.toLowerCase() === cert.verifier.toLowerCase() && a.readingHash.toLowerCase() === rh.toLowerCase(),
+      label: `${signers.size} independent AI verifier${signers.size > 1 ? "s" : ""} attested it`,
+      detail: `signed by ${names.join(", ")}; each holds VERIFIER_ROLE; contract requires ${threshold}`,
+      ok: allOk && signers.size >= threshold && signers.has(cert.verifier.toLowerCase()),
     });
   }
 
