@@ -168,6 +168,9 @@ class Store:
         return {r["d"]: dict(r) for r in rows}
 
     # ── audit batches ──
+    def count_unbatched(self) -> int:
+        return self.db.execute("SELECT COUNT(*) FROM verdicts WHERE batch_id IS NULL").fetchone()[0]
+
     def unbatched(self) -> list[dict]:
         return [self._row(r) for r in self.db.execute("SELECT * FROM verdicts WHERE batch_id IS NULL ORDER BY id").fetchall()]
 

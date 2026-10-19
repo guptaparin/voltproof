@@ -51,7 +51,7 @@ class Engine:
     def process(self, reading: dict, signature: str, label: str | None = None, note: str | None = None) -> dict:
         with self.lock:
             v = self._process(reading, signature, label, note)
-        if self.mode == "primary" and len(self.store.unbatched()) >= AUTO_ANCHOR_EVERY:
+        if self.mode == "primary" and self.store.count_unbatched() >= AUTO_ANCHOR_EVERY:
             try:
                 self.anchor()
             except Exception as e:  # never fail a submission because anchoring failed
