@@ -1,0 +1,198 @@
+{
+  "producers": [
+    {
+      "address": "0x3D921b8837059CBA8C84c7333A79C08163923bdF",
+      "name": "Campus Energy Co-op"
+    },
+    {
+      "address": "0xa9C0294Edc21A4e5f3a8F04840B90701a1CD5569",
+      "name": "North India Rooftop Households"
+    },
+    {
+      "address": "0x7661D5283D4b699b02a1125045e3Ce3965B702d1",
+      "name": "South India Rooftop Households"
+    },
+    {
+      "address": "0x76580408b0a5FecB35401f92eAbcEbb4c5EA28Df",
+      "name": "MSME Solar Collective"
+    },
+    {
+      "address": "0x53c32B29b37198Cb6c2E4EF3daa2F13516A07B82",
+      "name": "Agri-Solar Farmers Co-op"
+    }
+  ],
+  "devices": [
+    {
+      "address": "0xc2FD91158ad6ddf0F50fd8A3215aE649117712f7",
+      "name": "Patiala Campus Rooftop",
+      "city": "Patiala",
+      "lat": 30.3525,
+      "lon": 76.3616,
+      "capacityW": 50000,
+      "producer": "0x3D921b8837059CBA8C84c7333A79C08163923bdF",
+      "producerName": "Campus Energy Co-op",
+      "health": 0.901,
+      "shadingUtcHours": [],
+      "lab": true,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0x4845C17DCb2AfafB8b4084c2Ab68b21F8550dA49",
+      "name": "Chandigarh Sector 21 Home",
+      "city": "Chandigarh",
+      "lat": 30.7333,
+      "lon": 76.7794,
+      "capacityW": 5000,
+      "producer": "0xa9C0294Edc21A4e5f3a8F04840B90701a1CD5569",
+      "producerName": "North India Rooftop Households",
+      "health": 0.911,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xbd3979b9cCF59f602a80F86F9Dc4FbC5D2306471",
+      "name": "Delhi Dwarka Home",
+      "city": "New Delhi",
+      "lat": 28.5921,
+      "lon": 77.046,
+      "capacityW": 3000,
+      "producer": "0xa9C0294Edc21A4e5f3a8F04840B90701a1CD5569",
+      "producerName": "North India Rooftop Households",
+      "health": 0.939,
+      "shadingUtcHours": [
+        3
+      ],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0x5EB1804542645F232E385c2CD00a082121bC537d",
+      "name": "Jaipur Malviya Nagar Home",
+      "city": "Jaipur",
+      "lat": 26.8549,
+      "lon": 75.8243,
+      "capacityW": 4000,
+      "producer": "0xa9C0294Edc21A4e5f3a8F04840B90701a1CD5569",
+      "producerName": "North India Rooftop Households",
+      "health": 0.968,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xBa2433c2E36Ca5EdE0b2E01215843dfeE4681D76",
+      "name": "Jodhpur Farm Pump Array",
+      "city": "Jodhpur",
+      "lat": 26.2389,
+      "lon": 73.0243,
+      "capacityW": 10000,
+      "producer": "0x53c32B29b37198Cb6c2E4EF3daa2F13516A07B82",
+      "producerName": "Agri-Solar Farmers Co-op",
+      "health": 0.914,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": 1.45
+    },
+    {
+      "address": "0xF9B91e1250c8509B88231FD6cA07A4934F5C9cA9",
+      "name": "Ahmedabad Textile Unit",
+      "city": "Ahmedabad",
+      "lat": 23.0225,
+      "lon": 72.5714,
+      "capacityW": 25000,
+      "producer": "0x76580408b0a5FecB35401f92eAbcEbb4c5EA28Df",
+      "producerName": "MSME Solar Collective",
+      "health": 0.911,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xe0F66F5C4C02BF7eE86aeaFA54c2c06413815003",
+      "name": "Pune Housing Society",
+      "city": "Pune",
+      "lat": 18.5204,
+      "lon": 73.8567,
+      "capacityW": 8000,
+      "producer": "0x76580408b0a5FecB35401f92eAbcEbb4c5EA28Df",
+      "producerName": "MSME Solar Collective",
+      "health": 0.923,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xD9ff1B7af92075DA45CEac6A24d267c45CaCAc20",
+      "name": "Hyderabad Gachibowli Office",
+      "city": "Hyderabad",
+      "lat": 17.4401,
+      "lon": 78.3489,
+      "capacityW": 15000,
+      "producer": "0x76580408b0a5FecB35401f92eAbcEbb4c5EA28Df",
+      "producerName": "MSME Solar Collective",
+      "health": 0.976,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xa5f66482D4F6a66E96199747dFA3Dc1bb5e328d8",
+      "name": "Bengaluru Whitefield Home",
+      "city": "Bengaluru",
+      "lat": 12.9698,
+      "lon": 77.75,
+      "capacityW": 4000,
+      "producer": "0x7661D5283D4b699b02a1125045e3Ce3965B702d1",
+      "producerName": "South India Rooftop Households",
+      "health": 0.915,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0x7BD3a2ce62fc6ff5e0F08b64EBDC13A793aeCEE0",
+      "name": "Chennai Velachery Clinic",
+      "city": "Chennai",
+      "lat": 12.9815,
+      "lon": 80.218,
+      "capacityW": 6000,
+      "producer": "0x7661D5283D4b699b02a1125045e3Ce3965B702d1",
+      "producerName": "South India Rooftop Households",
+      "health": 0.974,
+      "shadingUtcHours": [
+        10
+      ],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0xDa85ceE9322b36f31CE3375E0abDC338d79963c2",
+      "name": "Kochi Kakkanad School",
+      "city": "Kochi",
+      "lat": 10.0159,
+      "lon": 76.3419,
+      "capacityW": 12000,
+      "producer": "0x7661D5283D4b699b02a1125045e3Ce3965B702d1",
+      "producerName": "South India Rooftop Households",
+      "health": 0.966,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    },
+    {
+      "address": "0x86faece21A669644712E0c8c76D9B328f4bBacc7",
+      "name": "Bhubaneswar Patia Home",
+      "city": "Bhubaneswar",
+      "lat": 20.3533,
+      "lon": 85.8195,
+      "capacityW": 3000,
+      "producer": "0xa9C0294Edc21A4e5f3a8F04840B90701a1CD5569",
+      "producerName": "North India Rooftop Households",
+      "health": 0.914,
+      "shadingUtcHours": [],
+      "lab": false,
+      "simulatedCheatFactor": null
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "model": "0x9574148d14ec5820701870b0dca02c1acaa197e01e3aa5397624759818db6494",
+  "meters": 80,
+  "daylight_hours_per_meter": 300,
+  "honest_certified_share_of_true_energy": 0.9977,
+  "scenarios": {
+    "x1.0": {
+      "accepted": 0.9986,
+      "held": 0.001,
+      "rejected": 0.0004,
+      "suspended_hours": 0.0,
+      "meters_suspended": 0.0,
+      "median_daylight_hours_to_suspension": null,
+      "certified_wh_vs_honest": 1.0
+    },
+    "x1.1": {
+      "accepted": 0.99,
+      "held": 0.0035,
+      "rejected": 0.0009,
+      "suspended_hours": 0.0056,
+      "meters_suspended": 0.0125,
+      "median_daylight_hours_to_suspension": 166,
+      "certified_wh_vs_honest": 1.0915
+    },
+    "x1.2": {
+      "accepted": 0.7027,
+      "held": 0.0168,
+      "rejected": 0.0061,
+      "suspended_hours": 0.2745,
+      "meters_suspended": 0.475,
+      "median_daylight_hours_to_suspension": 106.5,
+      "certified_wh_vs_honest": 0.8104
+    },
+    "x1.35": {
+      "accepted": 0.1077,
+      "held": 0.0119,
+      "rejected": 0.0169,
+      "suspended_hours": 0.8635,
+      "meters_suspended": 1.0,
+      "median_daylight_hours_to_suspension": 29.0,
+      "certified_wh_vs_honest": 0.1181
+    },
+    "x1.5": {
+      "accepted": 0.0335,
+      "held": 0.004,
+      "rejected": 0.016,
+      "suspended_hours": 0.9465,
+      "meters_suspended": 1.0,
+      "median_daylight_hours_to_suspension": 13.0,
+      "certified_wh_vs_honest": 0.0385
+    },
+    "x2.0": {
+      "accepted": 0.0046,
+      "held": 0.0023,
+      "rejected": 0.0146,
+      "suspended_hours": 0.9785,
+      "meters_suspended": 1.0,
+      "median_daylight_hours_to_suspension": 5.0,
+      "certified_wh_vs_honest": 0.007
+    },
+    "x3.0": {
+      "accepted": 0.0003,
+      "held": 0.0002,
+      "rejected": 0.0139,
+      "suspended_hours": 0.9856,
+      "meters_suspended": 1.0,
+      "median_daylight_hours_to_suspension": 4.0,
+      "certified_wh_vs_honest": 0.0005
+    }
+  },
+  "attacks": {
+    "night_generation": {
+      "accepted": 0.0,
+      "held": 0.0,
+      "rejected": 1.0,
+      "n": 80
+    },
+    "full_sun_under_heavy_cloud": {
+      "accepted": 0.0417,
+      "held": 0.0349,
+      "rejected": 0.9234,
+      "n": 1919
+    }
+  }
+}
