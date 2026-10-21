@@ -158,8 +158,8 @@ numpy, web3.py, next.js, react, typescript, viem, tailwindcss, esp32, c, micro-e
 
 ## Links
 
-- **Live demo (no install):** `https://<you>.github.io/voltproof/`
-- Code: `https://github.com/<you>/voltproof`
+- **Live demo (no install):** https://guptaparin.github.io/voltproof/
+- Code: https://github.com/guptaparin/voltproof
 - Demo video: `<YouTube link>`
 
 ## Gallery images (upload in this order)

@@ -1,5 +1,7 @@
 # VoltProof
 
+[![CI](https://github.com/guptaparin/voltproof/actions/workflows/ci.yml/badge.svg)](https://github.com/guptaparin/voltproof/actions/workflows/ci.yml) [![Live demo](https://github.com/guptaparin/voltproof/actions/workflows/demo.yml/badge.svg)](https://guptaparin.github.io/voltproof/)
+
 **Hourly solar certificates that prove the energy was real.**
 
 Rooftop meters sign each hour of solar output with their own key. An AI verifier checks every
@@ -10,8 +12,8 @@ contract mint a certificate, and each kilowatt-hour can be claimed exactly once.
 > energy trading, tokenized incentives for clean energy.
 > IEEE ClimateChain Global Hackathon 2026.
 >
-> **▶ Live demo:** `https://<your-github-user>.github.io/voltproof/`. It runs in your browser,
-> nothing to install. **Run the full stack:** `./demo.sh`.
+> **▶ Live demo:** **[guptaparin.github.io/voltproof](https://guptaparin.github.io/voltproof/)**. It runs in your
+> browser, nothing to install. **Run the full stack:** `./demo.sh`.
 
 ![VoltProof architecture](docs/gallery/02-architecture.png)
 
@@ -164,7 +166,7 @@ cd web && npm run build:demo              # → web/demo-site/ (static)
 ```
 
 **GitHub Pages:** push to GitHub, then go to Settings → Pages → Source: *GitHub Actions*. The
-`demo.yml` workflow publishes to `https://<user>.github.io/<repo>/` on every push.
+`demo.yml` workflow publishes to `https://<user>.github.io/<repo>/` on every push (this repo: https://guptaparin.github.io/voltproof/).
 **Vercel:** import the repo with root directory `web`, build command `npm run build:demo`,
 output directory `demo-site`, and environment variable `NEXT_PUBLIC_STATIC_DEMO=1`.
 
