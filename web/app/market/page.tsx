@@ -24,6 +24,8 @@ export default function Market() {
   const fleet = usePoll<{ devices: FleetDevice[]; producers: Record<string, string> }>("/v1/fleet", 0);
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [open, setOpen] = useState<number | null>(null);
+  // Kept at page level so the confirmation survives the listing disappearing once sold out.
+  const [purchase, setPurchase] = useState<{ text: string; certificateId: string; claimed: boolean } | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [bal, setBal] = useState<bigint | null>(null);
   const [onlyShoulder, setOnlyShoulder] = useState(false);
@@ -93,6 +95,21 @@ export default function Market() {
         </p>
       </section>
 
+      {purchase && (
+        <div role="status" className="mt-8 rounded-lg bg-panel p-4 shadow-[inset_0_0_0_1.5px_rgb(var(--ok))]">
+          <p className="font-semibold text-ok">{purchase.text}</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Link href={`/certificate?id=${purchase.certificateId}`} className="btn btn-sun">
+              View certificate #{purchase.certificateId}
+            </Link>
+            {purchase.claimed && (
+              <Link href="/ledger" className="btn btn-ghost">See it in the public ledger</Link>
+            )}
+            <button className="btn btn-ghost" onClick={() => setPurchase(null)}>Dismiss</button>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-rule pb-3">
         <p className="text-muted">{listings ? `${shown.length} listings` : "Reading listings from the chain…"}</p>
         <label className="flex items-center gap-2 text-[15px]">
@@ -134,7 +151,16 @@ export default function Market() {
               open === l.id && h && (
                 <tr key={`${l.id}-buy`}>
                   <td colSpan={5} className="pb-5">
-                    <BuyForm listing={l} sym={sym} onDone={load} />
+                    <BuyForm
+                      listing={l}
+                      sym={sym}
+                      onDone={(text, claimed) => {
+                        setPurchase({ text, certificateId: String(l.certificateId), claimed });
+                        setOpen(null);
+                        load();
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                    />
                   </td>
                 </tr>
               ),
@@ -154,7 +180,7 @@ export default function Market() {
   );
 }
 
-function BuyForm({ listing, sym, onDone }: { listing: Listing; sym: string; onDone: () => void }) {
+function BuyForm({ listing, sym, onDone }: { listing: Listing; sym: string; onDone: (text: string, claimed: boolean) => void }) {
   const { health: h } = useHealth();
   const max = Number(listing.remainingWh);
   const [kwh, setKwh] = useState(Math.min(1, max / 1000));
@@ -179,8 +205,11 @@ function BuyForm({ listing, sym, onDone }: { listing: Listing; sym: string; onDo
         value: cost,
       } as any);
       await publicClient(h).waitForTransactionReceipt({ hash });
-      setState({ done: retire ? `Claimed ${energy(Number(wh))} for ${beneficiary}. It has been burned and can't be claimed again.` : `Bought ${energy(Number(wh))}. It's in your wallet.` });
-      onDone();
+      const text = retire
+        ? `Claimed ${energy(Number(wh))} for ${beneficiary}. It has been burned and can't be claimed again.`
+        : `Bought ${energy(Number(wh))}. It's in your wallet.`;
+      setState({ done: text });
+      onDone(text, retire);
     } catch (e: any) {
       setState({ err: e.shortMessage || e.message });
     }
